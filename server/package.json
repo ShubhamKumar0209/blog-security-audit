@@ -1,0 +1,39 @@
+{
+  "name": "blog-security-audit-server",
+  "version": "1.0.0",
+  "description": "Blog Security Audit — Backend API (Express.js)",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "seed": "node src/utils/seed.js"
+  },
+  "dependencies": {
+    "express": "4.19.2",
+    "jsonwebtoken": "8.5.1",
+    "mongoose": "^7.6.3",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {},
+  "keywords": ["security-audit", "blog", "express", "cve-demo"],
+  "license": "MIT",
+  "_SECURITY_NOTICE": {
+    "BASELINE_DEPENDENCIES": {
+      "express": "4.19.2 — INTENTIONALLY VULNERABLE: CVE-2024-43796 (XSS in res.redirect)",
+      "jsonwebtoken": "8.5.1 — INTENTIONALLY VULNERABLE: CVE-2022-23541 (Algorithm Confusion)"
+    },
+    "HARDENED_DEPENDENCIES": {
+      "express": "4.21.1 — Fixed",
+      "jsonwebtoken": "9.0.2 — Fixed",
+      "helmet": "^7.1.0 — Security headers",
+      "express-rate-limit": "^7.1.4 — Rate limiting",
+      "express-validator": "^7.0.1 — Input validation",
+      "dompurify": "^3.0.6 — HTML sanitization",
+      "jsdom": "^23.0.1 — DOM for DOMPurify"
+    }
+  }
+}

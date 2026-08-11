@@ -1,0 +1,75 @@
+# =============================================================================
+# Blog Security Audit — Docker Compose
+# =============================================================================
+# Usage:
+#   docker-compose up          # Start all services
+#   docker-compose up mongodb  # Start only MongoDB
+#   docker-compose down        # Stop all services
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # --------------------------------------------------------------------------
+  # MongoDB Database
+  # --------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: blog-audit-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - blog-network
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Backend API Server
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: blog-audit-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - SECURITY_MODE=${SECURITY_MODE:-baseline}
+      - MONGODB_URI=mongodb://mongodb:27017/blog-security-audit
+      - JWT_SECRET=${JWT_SECRET:-dev_only_secret_change_in_production}
+      - JWT_EXPIRES_IN=24h
+      - CLIENT_URL=http://localhost:5173
+    depends_on:
+      - mongodb
+    networks:
+      - blog-network
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Frontend Dev Server
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: blog-audit-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+    networks:
+      - blog-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  blog-network:
+    driver: bridge
