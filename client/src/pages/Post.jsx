@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { postsAPI, healthAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import CommentSection from '../components/CommentSection';
+import DOMPurify from 'dompurify';
 
 export default function Post() {
   const { id } = useParams();
@@ -89,7 +90,10 @@ export default function Post() {
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
         ) : (
-          <div className="post-content">{post.content}</div>
+          <div 
+            className="post-content" 
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} 
+          />
         )}
 
         {/* Post Actions */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { commentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import DOMPurify from 'dompurify';
 
 export default function CommentSection({ postId, securityMode }) {
   const { isAuthenticated, user, isAdmin } = useAuth();
@@ -127,7 +128,10 @@ export default function CommentSection({ postId, securityMode }) {
                 dangerouslySetInnerHTML={{ __html: comment.content }}
               />
             ) : (
-              <div className="comment-body">{comment.content}</div>
+              <div 
+                className="comment-body" 
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(comment.content) }} 
+              />
             )}
           </div>
         ))
