@@ -17,6 +17,11 @@
 const BlogPost = require('../models/BlogPost');
 const env = require('../config/env');
 const logger = require('../utils/logger');
+const createDOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
 
 // GET /api/posts
 async function getPosts(req, res, next) {
@@ -97,9 +102,14 @@ async function createPost(req, res, next) {
       }
     }
 
+    let contentToSave = content;
+    if (env.isHardened()) {
+      contentToSave = DOMPurify.sanitize(content);
+    }
+
     const post = new BlogPost({
       title,
-      content,
+      content: contentToSave,
       author: req.user.id
     });
 
@@ -141,7 +151,9 @@ async function updatePost(req, res, next) {
 
     const { title, content } = req.body;
     if (title) post.title = title;
-    if (content) post.content = content;
+    if (content) {
+      post.content = env.isHardened() ? DOMPurify.sanitize(content) : content;
+    }
 
     await post.save();
     await post.populate('author', 'name email');

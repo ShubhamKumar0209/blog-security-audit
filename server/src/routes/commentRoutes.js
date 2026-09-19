@@ -10,9 +10,10 @@ const express = require('express');
 const router = express.Router();
 const { getComments, createComment, deleteComment } = require('../controllers/commentController');
 const { authenticate } = require('../middleware/auth');
+const { validate, validateObjectId } = require('../middleware/validate');
 
-router.get('/:postId', getComments);
-router.post('/:postId', authenticate, createComment);
-router.delete('/:commentId', authenticate, deleteComment);
+router.get('/:postId', validateObjectId('postId'), getComments);
+router.post('/:postId', authenticate, validateObjectId('postId'), validate('createComment'), createComment);
+router.delete('/:commentId', authenticate, validateObjectId('commentId'), deleteComment);
 
 module.exports = router;

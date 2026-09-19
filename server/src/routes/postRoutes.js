@@ -13,12 +13,13 @@ const express = require('express');
 const router = express.Router();
 const { getPosts, getPost, searchPosts, createPost, updatePost, deletePost } = require('../controllers/postController');
 const { authenticate } = require('../middleware/auth');
+const { validate, validateObjectId } = require('../middleware/validate');
 
 router.get('/', getPosts);
 router.get('/search', searchPosts);
-router.get('/:id', getPost);
-router.post('/', authenticate, createPost);
-router.put('/:id', authenticate, updatePost);
-router.delete('/:id', authenticate, deletePost);
+router.get('/:id', validateObjectId('id'), getPost);
+router.post('/', authenticate, validate('createPost'), createPost);
+router.put('/:id', authenticate, validateObjectId('id'), validate('updatePost'), updatePost);
+router.delete('/:id', authenticate, validateObjectId('id'), deletePost);
 
 module.exports = router;

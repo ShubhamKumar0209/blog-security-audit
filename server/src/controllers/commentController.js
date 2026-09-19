@@ -13,6 +13,11 @@ const Comment = require('../models/Comment');
 const BlogPost = require('../models/BlogPost');
 const env = require('../config/env');
 const logger = require('../utils/logger');
+const createDOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
 
 // GET /api/comments/:postId
 async function getComments(req, res, next) {
@@ -57,10 +62,15 @@ async function createComment(req, res, next) {
       }
     }
 
+    let contentToSave = content;
+    if (env.isHardened()) {
+      contentToSave = DOMPurify.sanitize(content);
+    }
+
     const comment = new Comment({
       postId,
       author: req.user.id,
-      content
+      content: contentToSave
     });
 
     await comment.save();
