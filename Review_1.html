@@ -1,0 +1,292 @@
+<h1 id="review-1-problem-definition-reconnaissance-threat-model">Review
+1 — Problem Definition, Reconnaissance &amp; Threat Model</h1>
+<h2 id="scenario-number-problem-statement">1. Scenario Number &amp;
+Problem Statement</h2>
+<p><strong>Scenario 1: Web Application Security Audit of a Blogging
+Platform</strong></p>
+<p><strong>Problem Statement:</strong> The SecureBlog platform exhibits
+multiple severe security vulnerabilities across its application stack,
+including Broken Access Control, Cross-Site Scripting (XSS), and
+vulnerable dependencies. This project aims to identify, exploit, and
+remediate these flaws to ensure data confidentiality, integrity, and
+availability. We perform a comprehensive security audit involving
+reconnaissance, threat modeling, exploitation of vulnerabilities, and
+implementation of robust defense mechanisms to protect sensitive user
+data and administrative functionalities.</p>
+<p><strong>Team Role Split:</strong> * <strong>Alice:</strong> Frontend
+Development &amp; Remediation * <strong>Bob:</strong> Backend API &amp;
+Database Hardening * <strong>Charlie:</strong> Exploit Development &amp;
+Penetration Testing * <strong>Dave:</strong> Defense Implementation
+(Middleware, Headers, Rate Limiting) * <strong>Eve:</strong> Reporting,
+Threat Modeling, &amp; Documentation</p>
+<h2 id="architecture-diagram">2. Architecture Diagram</h2>
+<p>The following architecture diagram outlines the hardened state of the
+application, explicitly marking trust boundaries and authentication
+flows.</p>
+<pre class="text"><code>┌─────────┐
+│ Browser │
+└────┬────┘
+     │  [Trust Boundary: Client-Side Security Headers]
+     │  CSP, X-Content-Type-Options, Referrer-Policy
+     │  X-Frame-Options, Permissions-Policy
+     ▼
+┌─────────────────────────────┐
+│ Security Headers            │ 
+│ (CSP, XCTO, RP, PP, XFO)    │
+└────────────┬────────────────┘
+             │
+             ▼
+┌─────────────────────────────┐
+│ Frontend (React SPA)        │
+│ - Safe text rendering       │ 
+│ - No dangerouslySetInnerHTML│
+│ - Source maps disabled      │
+└────────────┬────────────────┘
+             │  [Trust Boundary: Network to Application Gateway]
+             ▼
+┌─────────────────────────────────────────────────┐
+│ API Layer                                       │
+│                                                 │
+│  ┌──────────────┐  ┌──────────────────────────┐ │
+│  │ Request ID   │→ │ Security Headers         │ │
+│  └──────────────┘  └──────────┬───────────────┘ │
+│                               │                 │
+│  ┌──────────────┐  ┌──────────▼───────────────┐ │
+│  │ CORS         │→ │ Rate Limiting            │ │
+│  │ (explicit    │  │ Auth: 5/15min            │ │
+│  │  origin)     │  │ General: 100/15min       │ │
+│  └──────────────┘  └──────────┬───────────────┘ │
+│                               │                 │
+│  ┌──────────────┐  ┌──────────▼───────────────┐ │
+│  │ Body Parsing │→ │ Input Validation         │ │
+│  └──────────────┘  │ Type, length, format     │ │
+│                    └──────────┬───────────────┘ │
+│                               │  [Trust Boundary: Auth Enforcement]
+│  ┌──────────────┐  ┌──────────▼───────────────┐ │
+│  │ Authentication│→ │ Authorization            │ │
+│  │ JWT + HS256   │  │ Role + Ownership         │ │
+│  │ algorithm pin │  │                          │ │
+│  └──────────────┘  └──────────┬───────────────┘ │
+│                               │                 │
+│  ┌──────────────┐  ┌──────────▼───────────────┐ │
+│  │ Controller   │→ │ Error Handler            │ │
+│  │ (business    │  │ Generic client messages  │ │
+│  │  logic)      │  │ Detailed internal logs   │ │
+│  └──────────────┘  └──────────────────────────┘ │
+│                                                 │
+└───────────────────────┬─────────────────────────┘
+                        │  [Trust Boundary: Internal Network]
+                        ▼
+┌─────────────────────────────┐
+│ Validated Database Access   │
+│ (Mongoose ODM, schema       │
+│  validation)                │
+└────────────┬────────────────┘
+             │  [Trust Boundary: Database Storage]
+             ▼
+┌─────────────────────────────┐
+│ MongoDB                     │
+└─────────────────────────────┘
+
+         ┌────────────────────────────┐
+         │ Security Logging           │ 
+         │ (LOGIN, AUTH_FAIL, RATE    │
+         │  LIMIT, VALIDATION, ADMIN) │
+         │ With request IDs           │
+         └────────────────────────────┘</code></pre>
+<h2 id="attack-surface-inventory">3. Attack-Surface Inventory</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: left;">Method</th>
+<th style="text-align: left;">Path</th>
+<th style="text-align: left;">Parameters</th>
+<th style="text-align: left;">Auth Required (Y/N)</th>
+<th style="text-align: left;">Data Sensitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/admin/users</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/admin/stats</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELETE</strong></td>
+<td style="text-align: left;"><code>/api/admin/posts/:id</code></td>
+<td style="text-align: left;"><code>id</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELETE</strong></td>
+<td style="text-align: left;"><code>/api/admin/comments/:id</code></td>
+<td style="text-align: left;"><code>id</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELETE</strong></td>
+<td style="text-align: left;"><code>/api/admin/users/:id</code></td>
+<td style="text-align: left;"><code>id</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/posts/</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/posts/search</code></td>
+<td style="text-align: left;"><code>query</code> (query string)</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/posts/:id</code></td>
+<td style="text-align: left;"><code>id</code></td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/posts/</code></td>
+<td style="text-align: left;"><code>body</code> (title, content)</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PUT</strong></td>
+<td style="text-align: left;"><code>/api/posts/:id</code></td>
+<td style="text-align: left;"><code>id</code>, <code>body</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELETE</strong></td>
+<td style="text-align: left;"><code>/api/posts/:id</code></td>
+<td style="text-align: left;"><code>id</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/comments/:postId</code></td>
+<td style="text-align: left;"><code>postId</code></td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">LOW-MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/comments/:postId</code></td>
+<td style="text-align: left;"><code>postId</code>, <code>body</code>
+(text)</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">LOW-MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>DELETE</strong></td>
+<td style="text-align: left;"><code>/api/comments/:commentId</code></td>
+<td style="text-align: left;"><code>commentId</code></td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">LOW-MEDIUM</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/auth/register</code></td>
+<td style="text-align: left;"><code>body</code> (email, password,
+etc)</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/auth/login</code></td>
+<td style="text-align: left;"><code>body</code> (email, password)</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/auth/logout</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">LOW</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>POST</strong></td>
+<td style="text-align: left;"><code>/api/auth/refresh</code></td>
+<td style="text-align: left;">Cookie (<code>refreshToken</code>)</td>
+<td style="text-align: left;">N</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>GET</strong></td>
+<td style="text-align: left;"><code>/api/auth/profile</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Y</td>
+<td style="text-align: left;">HIGH</td>
+</tr>
+</tbody>
+</table>
+<h2 id="literature-cve-survey">4. Literature / CVE Survey</h2>
+<ol type="1">
+<li><p><strong>CVE-2022-23541 — jsonwebtoken Algorithm
+Confusion:</strong> <em>Source: NIST NVD</em> (<a
+href="https://nvd.nist.gov/vuln/detail/CVE-2022-23541">Link</a>) When
+<code>jwt.verify()</code> is called without specifying allowed
+algorithms, it enables an attacker to forge tokens by exploiting
+algorithm confusion. Our backend originally suffered from this by not
+restricting the signing algorithm, allowing asymmetric-signed tokens to
+bypass the HS256 requirement.</p></li>
+<li><p><strong>CVE-2024-43796 — Express XSS in res.redirect():</strong>
+<em>Source: NIST NVD</em> (<a
+href="https://nvd.nist.gov/vuln/detail/CVE-2024-43796">Link</a>) This
+vulnerability highlights that <code>response.redirect()</code> in older
+versions of Express generates an HTML body containing the redirect URL
+as a clickable link. If the URL contains an XSS payload, it can be
+reflected in the HTML response.</p></li>
+<li><p><strong>OWASP Top 10:2021-A01 - Broken Access Control:</strong>
+<em>Source: OWASP</em> (<a
+href="https://owasp.org/Top10/A01_2021-Broken_Access_Control/">Link</a>)
+The application’s initial state lacked role verification on
+administrative endpoints and ownership checks on post modification
+(V-07), directly mapping to this category. We mitigated this by
+enforcing role-based middleware (<code>/api/admin/*</code>) and
+ownership matching for CRUD operations.</p></li>
+<li><p><strong>OWASP Top 10:2021-A03 - Injection (Cross-Site
+Scripting):</strong> <em>Source: OWASP</em> (<a
+href="https://owasp.org/Top10/A03_2021-Injection/">Link</a>) The
+frontend originally used <code>dangerouslySetInnerHTML</code> for
+rendering blog content without sanitization (V-04). This allowed stored
+XSS attacks, compromising user sessions and data integrity.</p></li>
+<li><p><strong>CWE-209: Generation of Error Message Containing Sensitive
+Information:</strong> <em>Source: MITRE</em> (<a
+href="https://cwe.mitre.org/data/definitions/209.html">Link</a>) Prior
+to hardening, the server returned verbose error responses including
+stack traces and database structure details (V-06). This aided attacker
+reconnaissance and fingerprinting, leading us to implement a generic
+error handler that logs detailed errors internally while presenting
+sanitized messages to clients.</p></li>
+</ol>
