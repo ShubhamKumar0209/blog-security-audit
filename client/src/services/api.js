@@ -90,10 +90,10 @@ export const commentsAPI = {
   delete: (commentId) => api.delete(`/comments/${commentId}`)
 };
 
-// Admin API
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getStats: () => api.get('/admin/stats'),
+  deleteAllNonAdminPosts: () => api.delete('/admin/posts/non-admin'),
   deletePost: (id) => api.delete(`/admin/posts/${id}`),
   deleteComment: (id) => api.delete(`/admin/comments/${id}`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`)

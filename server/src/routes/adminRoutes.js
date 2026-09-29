@@ -12,7 +12,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { listUsers, adminDeletePost, adminDeleteComment, deleteUser, getStats } = require('../controllers/adminController');
+const { listUsers, adminDeletePost, adminDeleteComment, deleteUser, getStats, deleteAllNonAdminPosts } = require('../controllers/adminController');
 const { authenticate } = require('../middleware/auth');
 const env = require('../config/env');
 
@@ -37,6 +37,7 @@ router.use(authenticate, requireAdmin);
 
 router.get('/users', listUsers);
 router.get('/stats', getStats);
+router.delete('/posts/non-admin', deleteAllNonAdminPosts);
 router.delete('/posts/:id', adminDeletePost);
 router.delete('/comments/:id', adminDeleteComment);
 router.delete('/users/:id', deleteUser);

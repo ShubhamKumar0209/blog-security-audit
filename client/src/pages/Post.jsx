@@ -63,8 +63,15 @@ export default function Post() {
 
       <article className="post-detail">
         <h1>{post.title}</h1>
-        <div className="card-meta" style={{ marginBottom: '1.5rem' }}>
-          <span className="author">{post.author?.name || 'Unknown'}</span>
+        <div className="card-meta" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="author" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {post.author?.name || 'Unknown'}
+            {post.author?.role && (
+              <span className={`role-badge ${post.author.role === 'ADMIN' ? 'role-admin' : 'role-user'}`} style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
+                {post.author.role}
+              </span>
+            )}
+          </span>
           <span>•</span>
           <span>{formatDate(post.createdAt)}</span>
           {post.updatedAt !== post.createdAt && (
@@ -97,13 +104,11 @@ export default function Post() {
         )}
 
         {/* Post Actions */}
-        {(isOwner || isAdmin) && (
+        {(isOwner || isAdmin || (securityMode === 'baseline' && user)) && (
           <div className="post-actions">
-            {isOwner && (
-              <Link to={`/edit/${post._id}`} className="btn btn-secondary btn-sm">
-                ✏️ Edit
-              </Link>
-            )}
+            <Link to={`/edit/${post._id}`} className="btn btn-secondary btn-sm">
+              ✏️ Edit
+            </Link>
             <button onClick={handleDelete} className="btn btn-danger btn-sm">
               🗑️ Delete
             </button>

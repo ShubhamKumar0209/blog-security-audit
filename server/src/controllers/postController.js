@@ -31,7 +31,7 @@ async function getPosts(req, res, next) {
     const skip = (page - 1) * limit;
 
     const posts = await BlogPost.find()
-      .populate('author', 'name email')
+      .populate('author', 'name email role')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -64,7 +64,7 @@ async function searchPosts(req, res, next) {
       { $text: { $search: q } },
       { score: { $meta: 'textScore' } }
     )
-      .populate('author', 'name email')
+      .populate('author', 'name email role')
       .sort({ score: { $meta: 'textScore' } })
       .limit(20);
 
@@ -77,7 +77,7 @@ async function searchPosts(req, res, next) {
 // GET /api/posts/:id
 async function getPost(req, res, next) {
   try {
-    const post = await BlogPost.findById(req.params.id).populate('author', 'name email');
+    const post = await BlogPost.findById(req.params.id).populate('author', 'name email role');
     if (!post) {
       return res.status(404).json({ error: 'Post not found.' });
     }
@@ -114,7 +114,7 @@ async function createPost(req, res, next) {
     });
 
     await post.save();
-    await post.populate('author', 'name email');
+    await post.populate('author', 'name email role');
 
     logger.info('Post created', { postId: post._id, userId: req.user.id, requestId: req.requestId });
 
@@ -156,7 +156,7 @@ async function updatePost(req, res, next) {
     }
 
     await post.save();
-    await post.populate('author', 'name email');
+    await post.populate('author', 'name email role');
 
     logger.info('Post updated', { postId: post._id, userId: req.user.id, requestId: req.requestId });
 

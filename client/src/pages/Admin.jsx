@@ -26,6 +26,17 @@ export default function Admin() {
     }
   }
 
+  async function handleDeleteAllNonAdminPosts() {
+    if (!window.confirm('Delete all posts except those created by Admins? This cannot be undone.')) return;
+    try {
+      await adminAPI.deleteAllNonAdminPosts();
+      loadData(); // Refresh stats
+      alert('Non-admin posts deleted successfully.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete posts.');
+    }
+  }
+
   async function handleDeleteUser(userId) {
     if (!window.confirm('Delete this user and all their content?')) return;
     try {
@@ -67,6 +78,17 @@ export default function Admin() {
           <div className="stat-value">{stats.comments}</div>
           <div className="stat-label">Comments</div>
         </div>
+      </div>
+
+      {/* Global Actions */}
+      <div className="card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.25rem' }}>Global Actions</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Perform actions across the entire platform.</p>
+        </div>
+        <button onClick={handleDeleteAllNonAdminPosts} className="btn btn-danger">
+          Delete All Non-Admin Posts
+        </button>
       </div>
 
       {/* Users Table */}

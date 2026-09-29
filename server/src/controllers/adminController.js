@@ -117,4 +117,33 @@ async function getStats(req, res, next) {
   }
 }
 
-module.exports = { listUsers, adminDeletePost, adminDeleteComment, deleteUser, getStats };
+// DELETE /api/admin/posts/non-admin
+async function deleteAllNonAdminPosts(req, res, next) {
+  try {
+    const adminUsers = await User.find({ role: 'ADMIN' });
+    const adminIdsStr = adminUsers.map(u => u._id.toString());
+
+    // Find posts not authored by admins by filtering in JS
+    const allPosts = await BlogPost.find({});
+    const postsToDelete = allPosts.filter(p => !adminIdsStr.includes(p.author.toString()));
+    const postIds = postsToDelete.map(p => p._id);
+
+    // Delete associated comments
+    await Comment.deleteMany({ postId: { $in: postIds } });
+    
+    // Delete the posts
+    await BlogPost.deleteMany({ _id: { $in: postIds } });
+
+    logger.info('Admin deleted all non-admin posts', {
+      adminId: req.user.id,
+      deletedCount: postIds.length,
+      requestId: req.requestId
+    });
+
+    res.json({ message: `Deleted ${postIds.length} non-admin posts.` });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { listUsers, adminDeletePost, adminDeleteComment, deleteUser, getStats, deleteAllNonAdminPosts };
